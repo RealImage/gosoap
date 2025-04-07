@@ -126,25 +126,30 @@ func (c *Client) CallByStruct(s RequestStruct) (res *Response, err error) {
 	return c.CallByStructContext(context.Background(), s)
 }
 
-func (c *Client) waitAndRefreshDefinitions(d time.Duration) {
+func (c *Client) waitAndRefreshDefinitions(ctx context.Context, d time.Duration) {
 	for {
 		time.Sleep(d)
 		c.onRequest.Wait()
 		c.onDefinitionsRefresh.Add(1)
-		c.initWsdl()
+		c.initWsdl(ctx)
 		c.onDefinitionsRefresh.Done()
 	}
 }
 
-func (c *Client) initWsdl() {
-	c.Definitions, c.definitionsErr = getWsdlDefinitions(c.wsdl, c.HTTPClient)
+func (c *Client) initWsdl(ctx context.Context) {
+	c.Definitions, c.definitionsErr = getWsdlDefinitions(ctx, c.wsdl, c.HTTPClient)
 	if c.definitionsErr == nil {
 		c.URL = strings.TrimSuffix(c.Definitions.TargetNamespace, "/")
 	}
 }
 
-// SetWSDL set WSDL url
+// SetWSDL wraps SetWSDLWithContext using context.Background()
 func (c *Client) SetWSDL(wsdl string) {
+	c.SetWSDLWithContext(context.Background(), wsdl)
+}
+
+// SetWSDLWithContext sets WSDL url
+func (c *Client) SetWSDLWithContext(ctx context.Context, wsdl string) {
 	c.onRequest.Wait()
 	c.onDefinitionsRefresh.Wait()
 	c.onRequest.Add(1)
@@ -152,7 +157,7 @@ func (c *Client) SetWSDL(wsdl string) {
 	defer c.onRequest.Done()
 	defer c.onDefinitionsRefresh.Done()
 	c.wsdl = wsdl
-	c.initWsdl()
+	c.initWsdl(ctx)
 }
 
 // Do Process Soap Request
@@ -162,10 +167,10 @@ func (c *Client) Do(ctx context.Context, req *Request) (res *Response, err error
 	defer c.onRequest.Done()
 
 	c.once.Do(func() {
-		c.initWsdl()
+		c.initWsdl(ctx)
 		// 15 minute to prevent abuse.
 		if c.RefreshDefinitionsAfter >= 15*time.Minute {
-			go c.waitAndRefreshDefinitions(c.RefreshDefinitionsAfter)
+			go c.waitAndRefreshDefinitions(ctx, c.RefreshDefinitionsAfter)
 		}
 	})
 
