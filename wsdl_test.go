@@ -1,6 +1,7 @@
 package gosoap
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
@@ -60,7 +61,7 @@ func Test_getWsdlBody(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := getWsdlBody(tt.args.u, nil)
+			_, err := getWsdlBody(context.TODO(), tt.args.u, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getwsdlBody() error = %v, wantErr %v", err, tt.wantErr)
 				return

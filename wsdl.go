@@ -1,6 +1,7 @@
 package gosoap
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -157,7 +158,7 @@ type xsdMaxInclusive struct {
 	Value string `xml:"value,attr"`
 }
 
-func getWsdlBody(u string, c *http.Client) (reader io.ReadCloser, err error) {
+func getWsdlBody(ctx context.Context, u string, c *http.Client) (reader io.ReadCloser, err error) {
 	parse, err := url.Parse(u)
 	if err != nil {
 		return nil, err
@@ -172,7 +173,13 @@ func getWsdlBody(u string, c *http.Client) (reader io.ReadCloser, err error) {
 	if c == nil {
 		c = &http.Client{}
 	}
-	r, err := c.Get(u)
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := c.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -180,8 +187,8 @@ func getWsdlBody(u string, c *http.Client) (reader io.ReadCloser, err error) {
 }
 
 // getWsdlDefinitions sent request to the wsdl url and set definitions on struct
-func getWsdlDefinitions(u string, c *http.Client) (wsdl *wsdlDefinitions, err error) {
-	reader, err := getWsdlBody(u, c)
+func getWsdlDefinitions(ctx context.Context, u string, c *http.Client) (wsdl *wsdlDefinitions, err error) {
+	reader, err := getWsdlBody(ctx, u, c)
 	if err != nil {
 		return nil, err
 	}
